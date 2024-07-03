@@ -1,7 +1,7 @@
 import queue
 from typing import Generator
 
-from pubsub import MessageAnnouncer, Listener
+from app.pubsub.port import MessageAnnouncer, Listener
 
 
 class NoDepMessageAnnouncer(MessageAnnouncer):
