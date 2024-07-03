@@ -1,26 +1,37 @@
 import queue
-from typing import Generator
+from typing import Dict, Generator, List
 
 from app.pubsub.port import MessageAnnouncer, Listener
 
 
 class NoDepMessageAnnouncer(MessageAnnouncer):
     def __init__(self):
-        self.listeners = []
+        self.listeners_channels: Dict[str, List[queue.Queue]] = {}
 
     def listen(self, channel="default") -> 'NoDepListener':
         q = queue.Queue(maxsize=5)
-        self.listeners.append({channel: q})
+        
+        listeners_channel = self.listeners_channels.get(channel)
+        
+        if listeners_channel is None:
+            self.listeners_channels[channel] = [q]
+        
+        else:
+            listeners_channel.append(q)
+        
         return NoDepListener(listener_queue=q)
 
     def announce_formatted(self, formatted_msg: str, channel="default") -> None:
-        for listener in self.listeners:
+        listeners_channel = self.listeners_channels.get(channel, [])
+        
+        for listener_queue in listeners_channel:
             try:
-                listener_queue = listener.get(channel)
-                if listener_queue:
-                    listener_queue.put_nowait(formatted_msg)
+                listener_queue.put_nowait(formatted_msg)
             except queue.Full:
-                self.listeners.remove(listener)
+                listeners_channel.remove(listener_queue)
+                
+                if len(listeners_channel) == 0:
+                    del self.listeners_channels[channel]
 
 
 class NoDepListener(Listener):
