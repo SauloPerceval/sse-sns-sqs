@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 
 from app.pubsub.no_dependency import NoDepMessageAnnouncer
 
@@ -11,7 +11,14 @@ def sse(id):
     if request.method == "GET":
         listener = announcer.listen(channel=id)
         
-        return listener.messages_generator(), {"Context-Type": "text/event-stream"}
+        def stream():
+            yield "retry: 0\n"
+            
+            for message in listener.messages_generator():
+                if message:
+                    yield message
+        
+        return Response(stream(), mimetype="text/event-stream")
     
     else:
         message = request.json.get("message")

@@ -40,4 +40,8 @@ class NoDepListener(Listener):
 
     def messages_generator(self) -> Generator[str, None, None]:
         while True:
-            yield self.listener_queue.get()
+            try:
+                yield self.listener_queue.get(timeout=1)
+            except queue.Empty:
+                yield None
+    
